@@ -75,6 +75,13 @@ public class JGitEnvironmentRepository extends AbstractScmEnvironmentRepository
 	private JGitEnvironmentRepository.JGitFactory gitFactory = new JGitEnvironmentRepository.JGitFactory();
 
 	private String defaultLabel = DEFAULT_LABEL;
+	
+	/**
+	 * Flag to indicate whether the SSH property "StrictHostKeyChecking" should be turned 
+	 * on or off when connecting to the Git repository.
+	 * The security implications should be considered before turning this off.
+	 */
+	private boolean strictHostKeyChecking = true;
 
 	public JGitEnvironmentRepository(ConfigurableEnvironment environment) {
 		super(environment);
@@ -110,6 +117,14 @@ public class JGitEnvironmentRepository extends AbstractScmEnvironmentRepository
 
 	public void setDefaultLabel(String defaultLabel) {
 		this.defaultLabel = defaultLabel;
+	}
+
+	public boolean isStrictHostKeyChecking() {
+		return strictHostKeyChecking;
+	}
+
+	public void setStrictHostKeyChecking(boolean strictHostKeyChecking) {
+		this.strictHostKeyChecking = strictHostKeyChecking;
 	}
 
 	@Override
@@ -177,6 +192,7 @@ public class JGitEnvironmentRepository extends AbstractScmEnvironmentRepository
 	 */
 	private void initClonedRepository() throws GitAPIException, IOException {
 		if (!getUri().startsWith(FILE_URI_PREFIX)) {
+			initialize();
 			deleteBaseDirIfExists();
 			cloneToBasedir();
 			openGitRepository();
@@ -286,7 +302,7 @@ public class JGitEnvironmentRepository extends AbstractScmEnvironmentRepository
 	}
 
 	private void initialize() {
-		if (getUri().startsWith("file:") && !this.initialized) {
+		if ((getUri().startsWith(FILE_URI_PREFIX) || !this.strictHostKeyChecking) && !this.initialized) {
 			SshSessionFactory.setInstance(new JschConfigSessionFactory() {
 				@Override
 				protected void configure(Host hc, Session session) {
